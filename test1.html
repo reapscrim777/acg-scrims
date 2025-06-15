@@ -12,7 +12,7 @@
             <ul>
                 <li><a href="index.html">Strona Główna</a></li>
                 <li><a href="test1.html">Historia Scrimów</a></li>
-                <li><a href="test2.html">test2</a></li>
+                <li><a href="test2.html">Statystyki Zawodników</a></li>
                 <li><a href="test3.html">test3</a></li>
                 <li><a href="test4.html">test4</a></li>
                 <li><a href="test5.html">test5</a></li>
@@ -86,7 +86,7 @@
                     </tr>
                 </thead>
                 <tbody id="scrimTableBody">
-                    </tbody>
+                </tbody>
             </table>
         </section>
 
@@ -167,29 +167,24 @@
                 "wukong": "Wukong",
                 "velkoz": "Velkoz",
                 "ksante": "KSante",
-                // Dodaj inne wyjątki, jeśli zauważysz brakujące ikony
+                "ambessa": "Ambessa", // Dodano Ambessę (jeśli zostanie oficjalnie wydana)
             };
 
             let dataDragonName = nameMap[cleanedName];
 
             // Jeśli nie ma w mapie, spróbuj sformatować
             if (!dataDragonName) {
-                // Usuń spacje i zamień pierwszą literę na dużą
+                // Usuń spacje i zamień pierwszą literę na dużą (np. akali -> Akali)
                 dataDragonName = cleanedName.replace(/\s+/g, '');
                 if (dataDragonName.length > 0) {
                     dataDragonName = dataDragonName.charAt(0).toUpperCase() + dataDragonName.slice(1);
                 }
-                // Specjalne przypadki dla nazw z wieloma słowami (np. Miss Fortune -> MissFortune)
-                if (cleanedName.includes(' ')) {
+                // Specjalne przypadki dla nazw z wieloma słowami, jeśli nie były w nameMap (np. Miss Fortune -> MissFortune)
+                if (cleanedName.includes(' ') && !cleanedName.includes('.')) { // Wyklucz "dr. mundo" itp.
                     dataDragonName = cleanedName.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('');
                 }
             }
             
-            // Ostateczna weryfikacja dla Ambessy, jeśli jest w planach jako oficjalny champion
-            if (cleanedName === "ambessa") {
-                dataDragonName = "Ambessa"; // Zgodnie z Data Dragon po jej wydaniu
-            }
-
             return `${CHAMPION_IMAGE_BASE_URL}${dataDragonName}.png`;
         }
 
@@ -232,12 +227,12 @@
                 }).join('');
 
                 row.innerHTML = `
-                    <td>${scrim.date}</td>
-                    <td class="${resultClass}">${scrim.result}</td>
-                    <td>${scrim.time}</td>
-                    <td><div class="champion-icons-container">${ourChampionsHtml}</div></td>
-                    <td><div class="champion-icons-container">${enemyChampionsHtml}</div></td>
-                    <td><button class="delete-btn" data-id="${scrim.id}">Usuń</button></td>
+                    <td data-label="Data:">${scrim.date}</td>
+                    <td data-label="Wynik:" class="${resultClass}">${scrim.result}</td>
+                    <td data-label="Czas Gry:">${scrim.time}</td>
+                    <td data-label="Nasze Postacie:"><div class="champion-icons-container">${ourChampionsHtml}</div></td>
+                    <td data-label="Postacie Przeciwników:"><div class="champion-icons-container">${enemyChampionsHtml}</div></td>
+                    <td data-label="Akcje:"><button class="delete-btn" data-id="${scrim.id}">Usuń</button></td>
                 `;
                 scrimTableBody.appendChild(row);
             });
@@ -293,6 +288,30 @@
         document.addEventListener('DOMContentLoaded', () => {
             renderTable();
         });
+    </script>
+
+    <script type="module">
+        // Importuj funkcje Firebase z CDN
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-analytics.js";
+
+        // Twoja konfiguracja Firebase (pobrana z konsoli Firebase)
+        const firebaseConfig = {
+            apiKey: "AIzaSyAO6miiEEkE7U7SqVSLZqWv-SJvcM5bH9A",
+            authDomain: "acg-scrims.firebaseapp.com",
+            databaseURL: "https://acg-scrims-default-rtdb.firebaseio.com",
+            projectId: "acg-scrims",
+            storageBucket: "acg-scrims.firebasestorage.app",
+            messagingSenderId: "1030942640234",
+            appId: "1:1030942640234:web:907c5eab8cdd5cafa82213",
+            measurementId: "G-TB30DSGT83"
+        };
+
+        // Inicjalizacja Firebase i Analytics
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+
+        console.log("Firebase i Analytics pomyślnie zainicjalizowane dla strony: Historia Scrimów!");
     </script>
 </body>
 </html>
