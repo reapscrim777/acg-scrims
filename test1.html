@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AC GDANSK - Historia Scrimów</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="index.html">Strona Główna</a></li>
+                <li><a href="test1.html">Historia Scrimów</a></li>
+                <li><a href="test2.html">test2</a></li>
+                <li><a href="test3.html">test3</a></li>
+                <li><a href="test4.html">test4</a></li>
+                <li><a href="test5.html">test5</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <h1>Historia Scrimów</h1>
+
+        <section class="stats-summary">
+            <div class="stats-item">Ilość scrimów: <span id="totalScrims">0</span></div>
+            <div class="stats-item">Wygrane: <span id="wins">0</span></div>
+            <div class="stats-item">Przegrane: <span id="losses">0</span></div>
+            <div class="stats-item">% zwycięstw: <span id="winRate">0%</span></div>
+        </section>
+
+        <section class="add-scrim-form">
+            <h2>Dodaj nowy Scrim</h2>
+            <form id="scrimForm">
+                <div class="form-group">
+                    <label for="scrimDate">Data:</label>
+                    <input type="date" id="scrimDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="scrimResult">Wynik:</label>
+                    <select id="scrimResult" required>
+                        <option value="">Wybierz wynik</option>
+                        <option value="WIN">WIN</option>
+                        <option value="LOSE">LOSE</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="scrimTime">Czas Gry:</label>
+                    <input type="text" id="scrimTime" placeholder="np. 35:12" required>
+                </div>
+                
+                <div class="form-group team-champions">
+                    <label>Nasze Postacie:</label>
+                    <input type="text" class="our-champion-input" placeholder="Top" required>
+                    <input type="text" class="our-champion-input" placeholder="Jungle" required>
+                    <input type="text" class="our-champion-input" placeholder="Mid" required>
+                    <input type="text" class="our-champion-input" placeholder="Adc" required>
+                    <input type="text" class="our-champion-input" placeholder="Support" required>
+                </div>
+
+                <div class="form-group team-champions">
+                    <label>Postacie Przeciwników:</label>
+                    <input type="text" class="enemy-champion-input" placeholder="Top" required>
+                    <input type="text" class="enemy-champion-input" placeholder="Jungle" required>
+                    <input type="text" class="enemy-champion-input" placeholder="Mid" required>
+                    <input type="text" class="enemy-champion-input" placeholder="Adc" required>
+                    <input type="text" class="enemy-champion-input" placeholder="Support" required>
+                </div>
+
+                <button type="submit">Dodaj Scrim</button>
+            </form>
+        </section>
+
+        <section class="scrim-history">
+            <h2>Poprzednie Scrimy</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Wynik</th>
+                        <th>Czas Gry</th>
+                        <th>Nasze Postacie</th>
+                        <th>Postacie Przeciwników</th>
+                        <th>Akcje</th>
+                    </tr>
+                </thead>
+                <tbody id="scrimTableBody">
+                    </tbody>
+            </table>
+        </section>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2025 AC GDANSK. Wszelkie prawa zastrzeżone.</p>
+    </footer>
+
+    <script>
+        // Dane do tabeli (przykładowe, możesz je usunąć lub zmienić)
+        // WAŻNE: Te dane znikną po odświeżeniu strony, chyba że zaimplementujesz zapis do localStorage!
+        let scrimsData = [
+            { id: 1, date: "2025-06-14", result: "WIN", time: "35:12", our: "Jinx, Thresh, Orianna, Malphite, Lee Sin", enemy: "Ashe, Braum, Zed, Nautilus, Garen" },
+            { id: 2, date: "2025-06-12", result: "LOSE", time: "28:45", our: "Ezreal, Karma, Syndra, Trundle, Camille", enemy: "Kai'Sa, Leona, Viktor, Warwick, Jayce" },
+            { id: 3, date: "2025-06-10", result: "WIN", time: "42:00", our: "Caitlyn, Lux, Kassadin, Zac, Renekton", enemy: "Vayne, Nami, Twisted Fate, Sejuani, Darius" },
+            { id: 4, date: "2025-06-08", result: "LOSE", time: "31:20", our: "Senna, Tahm Kench, Ryze, Volibear, Irelia", enemy: "Miss Fortune, Bard, Akali, Olaf, Ornn" }
+        ];
+
+        // Konfiguracja URL dla ikon postaci z League of Legends
+        // Zawsze warto sprawdzić najnowszą stabilną wersję na https://ddragon.leagueoflegends.com/api/versions.json
+        const DDRAGON_VERSION = '14.22.1'; 
+        const CHAMPION_IMAGE_BASE_URL = `http://ddragon.leagueoflegends.com/cdn/${DDRAGON_VERSION}/img/champion/`;
+        const FALLBACK_ICON_URL = 'https://via.placeholder.com/24x24?text=N/A'; // Ikona zastępcza
+
+        const scrimForm = document.getElementById('scrimForm');
+        const scrimTableBody = document.getElementById('scrimTableBody');
+        const scrimDateInput = document.getElementById('scrimDate');
+        const scrimResultInput = document.getElementById('scrimResult');
+        const scrimTimeInput = document.getElementById('scrimTime');
+        
+        const ourChampionInputs = document.querySelectorAll('.our-champion-input');
+        const enemyChampionInputs = document.querySelectorAll('.enemy-champion-input');
+
+        // Referencje do elementów statystyk
+        const totalScrimsSpan = document.getElementById('totalScrims');
+        const winsSpan = document.getElementById('wins');
+        const lossesSpan = document.getElementById('losses');
+        const winRateSpan = document.getElementById('winRate');
+
+        /**
+         * Standaryzuje nazwę postaci i zwraca URL do jej ikonki.
+         * Obsługuje popularne wyjątki i formatuje nazwy do pasujących z Data Dragon.
+         */
+        function getChampionIconUrl(championName) {
+            if (!championName) return FALLBACK_ICON_URL;
+
+            let cleanedName = championName.trim().toLowerCase().replace(/'/g, '');
+
+            const nameMap = {
+                "aurelion sol": "AurelionSol",
+                "chogath": "Chogath",
+                "dr. mundo": "DrMundo",
+                "drmundo": "DrMundo",
+                "kaisa": "Kaisa",
+                "kogmaw": "KogMaw",
+                "lee sin": "LeeSin",
+                "miss fortune": "MissFortune",
+                "nunu & willump": "Nunu",
+                "nunu": "Nunu",
+                "renata glasc": "Renata",
+                "renataglasc": "Renata",
+                "tahm kench": "TahmKench",
+                "twisted fate": "TwistedFate",
+                "xin zhao": "XinZhao",
+                "belveth": "BelVeth",
+                "fiddlesticks": "Fiddlesticks",
+                "blitzcrank": "Blitzcrank",
+                "master yi": "MasterYi",
+                "masteryi": "MasterYi",
+                "rengar": "Rengar",
+                "reksai": "RekSai",
+                "viego": "Viego",
+                "kled": "Kled",
+                "jarvan iv": "JarvanIV",
+                "jarvaniv": "JarvanIV",
+                "monkey king": "Wukong",
+                "wukong": "Wukong",
+                "velkoz": "Velkoz",
+                "ksante": "KSante",
+                // Dodaj inne wyjątki, jeśli zauważysz brakujące ikony
+            };
+
+            let dataDragonName = nameMap[cleanedName];
+
+            // Jeśli nie ma w mapie, spróbuj sformatować
+            if (!dataDragonName) {
+                // Usuń spacje i zamień pierwszą literę na dużą
+                dataDragonName = cleanedName.replace(/\s+/g, '');
+                if (dataDragonName.length > 0) {
+                    dataDragonName = dataDragonName.charAt(0).toUpperCase() + dataDragonName.slice(1);
+                }
+                // Specjalne przypadki dla nazw z wieloma słowami (np. Miss Fortune -> MissFortune)
+                if (cleanedName.includes(' ')) {
+                    dataDragonName = cleanedName.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('');
+                }
+            }
+            
+            // Ostateczna weryfikacja dla Ambessy, jeśli jest w planach jako oficjalny champion
+            if (cleanedName === "ambessa") {
+                dataDragonName = "Ambessa"; // Zgodnie z Data Dragon po jej wydaniu
+            }
+
+            return `${CHAMPION_IMAGE_BASE_URL}${dataDragonName}.png`;
+        }
+
+        /**
+         * Aktualizuje wyświetlane statystyki scrimów.
+         */
+        function updateStats() {
+            const totalScrims = scrimsData.length;
+            const wins = scrimsData.filter(scrim => scrim.result === 'WIN').length;
+            const losses = scrimsData.filter(scrim => scrim.result === 'LOSE').length;
+            const winRate = totalScrims > 0 ? ((wins / totalScrims) * 100).toFixed(2) : 0;
+
+            totalScrimsSpan.textContent = totalScrims;
+            winsSpan.textContent = wins;
+            lossesSpan.textContent = losses;
+            winRateSpan.textContent = `${winRate}%`;
+        }
+
+        /**
+         * Renderuje (odświeża) tabelę scrimów.
+         */
+        function renderTable() {
+            scrimTableBody.innerHTML = ''; // Czyści tabelę przed ponownym renderowaniem
+            scrimsData.forEach(scrim => {
+                const row = document.createElement('tr');
+                const resultClass = scrim.result.toLowerCase(); // 'win' lub 'lose' dla klas CSS
+
+                const ourChampionsHtml = scrim.our.split(',').map(name => {
+                    const trimmedName = name.trim();
+                    if (!trimmedName) return ''; // Pomiń puste nazwy
+                    const iconUrl = getChampionIconUrl(trimmedName);
+                    return `<img src="${iconUrl}" alt="${trimmedName}" title="${trimmedName}" class="champion-icon" onerror="this.onerror=null; this.src='${FALLBACK_ICON_URL}';">`;
+                }).join('');
+
+                const enemyChampionsHtml = scrim.enemy.split(',').map(name => {
+                    const trimmedName = name.trim();
+                    if (!trimmedName) return ''; // Pomiń puste nazwy
+                    const iconUrl = getChampionIconUrl(trimmedName);
+                    return `<img src="${iconUrl}" alt="${trimmedName}" title="${trimmedName}" class="champion-icon" onerror="this.onerror=null; this.src='${FALLBACK_ICON_URL}';">`;
+                }).join('');
+
+                row.innerHTML = `
+                    <td>${scrim.date}</td>
+                    <td class="${resultClass}">${scrim.result}</td>
+                    <td>${scrim.time}</td>
+                    <td><div class="champion-icons-container">${ourChampionsHtml}</div></td>
+                    <td><div class="champion-icons-container">${enemyChampionsHtml}</div></td>
+                    <td><button class="delete-btn" data-id="${scrim.id}">Usuń</button></td>
+                `;
+                scrimTableBody.appendChild(row);
+            });
+
+            // Dodaj event listenery do przycisków usuwania
+            document.querySelectorAll('.delete-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const idToDelete = parseInt(this.dataset.id);
+                    deleteScrim(idToDelete);
+                });
+            });
+
+            updateStats(); // Zawsze aktualizuj statystyki po renderowaniu tabeli
+        }
+
+        /**
+         * Usuwa scrim z tablicy danych i odświeża tabelę.
+         */
+        function deleteScrim(id) {
+            scrimsData = scrimsData.filter(scrim => scrim.id !== id);
+            renderTable(); // Odśwież tabelę i statystyki
+        }
+
+        // Obsługa wysyłania formularza dodawania nowego scrimu
+        scrimForm.addEventListener('submit', function(event) {
+            event.preventDefault(); // Zapobiega domyślnej wysyłce formularza (przeładowaniu strony)
+
+            // Generowanie unikalnego ID dla nowego scrimu
+            const newId = scrimsData.length > 0 ? Math.max(...scrimsData.map(s => s.id)) + 1 : 1;
+
+            // Zbierz nazwy postaci z inputów
+            const ourChampionsArray = Array.from(ourChampionInputs).map(input => input.value.trim()).filter(Boolean);
+            const ourChampionsString = ourChampionsArray.join(', '); // Połącz w jeden string
+
+            const enemyChampionsArray = Array.from(enemyChampionInputs).map(input => input.value.trim()).filter(Boolean);
+            const enemyChampionsString = enemyChampionsArray.join(', ');
+
+            const newScrim = {
+                id: newId,
+                date: scrimDateInput.value,
+                result: scrimResultInput.value,
+                time: scrimTimeInput.value,
+                our: ourChampionsString,
+                enemy: enemyChampionsString
+            };
+
+            scrimsData.unshift(newScrim); // Dodaj nowy scrim na początek tablicy
+            renderTable(); // Odśwież tabelę i statystyki
+            scrimForm.reset(); // Wyczyść formularz po dodaniu
+        });
+
+        // Inicjalne renderowanie tabeli i statystyk po załadowaniu strony
+        document.addEventListener('DOMContentLoaded', () => {
+            renderTable();
+        });
+    </script>
+</body>
+</html>
